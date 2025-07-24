@@ -8,6 +8,7 @@ import { CodePreview } from "@/components/CodePreview";
 const Workspace = () => {
   const location = useLocation();
   const initialPrompt = location.state?.initialPrompt;
+  const chat_id = location.state?.chat_id;
   const [showCodeViewer, setShowCodeViewer] = useState(false);
   const [isChatCollapsed, setIsChatCollapsed] = useState(false);
 
@@ -38,6 +39,7 @@ const Workspace = () => {
               <Panel defaultSize={showCodeViewer ? 33.33 : 50} minSize={25}>
                 <ChatInterface 
                   initialPrompt={initialPrompt} 
+                  chat_id={chat_id}
                   onCollapse={() => setIsChatCollapsed(true)}
                 />
               </Panel>

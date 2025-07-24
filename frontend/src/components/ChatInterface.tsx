@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Send, Bot, User, PanelLeftClose, PanelLeftOpen, History } from "lucide-react";
+import { Send, Bot, User, PanelLeftClose, History } from "lucide-react";
 
 interface Message {
   id: string;
@@ -11,84 +11,101 @@ interface Message {
   timestamp: Date;
 }
 
-const mockMessages: Message[] = [
-  {
-    id: '1',
-    content: 'Hello! I\'m your AI coding assistant. How can I help you build your application today?',
-    sender: 'ai',
-    timestamp: new Date()
-  },
-  {
-    id: '2',
-    content: 'I want to create a beautiful landing page for my startup',
-    sender: 'user',
-    timestamp: new Date()
-  },
-  {
-    id: '3',
-    content: 'Great! I\'ll help you create a modern landing page. Let me start by building a hero section with a clean design and call-to-action buttons. I\'ll use a professional color scheme with gradients.',
-    sender: 'ai',
-    timestamp: new Date()
-  }
-];
-
 interface ChatInterfaceProps {
   initialPrompt?: string;
+  chat_id?: string;
   onCollapse?: () => void;
 }
 
-export const ChatInterface = ({ initialPrompt, onCollapse }: ChatInterfaceProps) => {
-  const [messages, setMessages] = useState<Message[]>(mockMessages);
+export const ChatInterface = ({ initialPrompt, chat_id, onCollapse }: ChatInterfaceProps) => {
+  const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [showHistory, setShowHistory] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
+  // 获取历史消息
   useEffect(() => {
-    if (initialPrompt) {
-      const userMessage: Message = {
-        id: Date.now().toString(),
-        content: initialPrompt,
-        sender: 'user',
-        timestamp: new Date()
-      };
-      
-      setMessages(prev => [...prev, userMessage]);
-      
-      // Simulate AI response to the initial prompt
-      setTimeout(() => {
-        const aiResponse: Message = {
-          id: (Date.now() + 1).toString(),
-          content: `Great idea! I'll help you build "${initialPrompt}". Let me start by creating the basic structure and components for your application.`,
-          sender: 'ai',
-          timestamp: new Date()
-        };
-        setMessages(prev => [...prev, aiResponse]);
-      }, 1500);
-    }
-  }, [initialPrompt]);
+    if (!chat_id) return;
+    setLoading(true);
+    setError(null);
+    fetch(`http://127.0.0.1:8000/chat/${chat_id}`)
+      .then(res => {
+        if (!res.ok) throw new Error('Failed to load');
+        return res.json();
+      })
+      .then(data => {
+        setMessages(
+          data.messages.map((msg: any, idx: number) => ({
+            id: idx + '',
+            content: msg.content,
+            sender: msg.role,
+            timestamp: new Date()
+          }))
+        );
+        setLoading(false);
+      })
+      .catch(() => {
+        setError('Failed to load chat history');
+        setLoading(false);
+      });
+  }, [chat_id]);
 
-  const handleSendMessage = () => {
-    if (!inputValue.trim()) return;
-
+  // 发送消息
+  const handleSendMessage = async () => {
+    if (!inputValue.trim() || !chat_id) return;
+    setError(null);
+    setLoading(true);
     const newMessage: Message = {
       id: Date.now().toString(),
       content: inputValue,
       sender: 'user',
       timestamp: new Date()
     };
-
     setMessages(prev => [...prev, newMessage]);
     setInputValue('');
-
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse: Message = {
-        id: (Date.now() + 1).toString(),
-        content: 'I understand what you need. Let me implement that for you right away!',
+    try {
+      // 流式处理
+      const response = await fetch("http://127.0.0.1:8000/chat/", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id, message: inputValue })
+      });
+      const reader = response.body?.getReader();
+      if (!reader) throw new Error('No response');
+      let aiMsg = '';
+      let aiMsgId = Date.now() + '';
+      // 先插入空AI消息
+      setMessages(prev => [...prev, {
+        id: aiMsgId,
+        content: '',
         sender: 'ai',
         timestamp: new Date()
-      };
-      setMessages(prev => [...prev, aiResponse]);
-    }, 1000);
+      }]);
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        aiMsg += new TextDecoder().decode(value);
+        // 流式渲染：每次更新AI消息内容
+        setMessages(prev => prev.map(m => m.id === aiMsgId ? { ...m, content: aiMsg } : m));
+      }
+      // 发送完消息后自动刷新历史
+      fetch(`http://127.0.0.1:8000/chat/${chat_id}`)
+        .then(res => res.json())
+        .then(data => {
+          setMessages(
+            data.messages.map((msg: any, idx: number) => ({
+              id: idx + '',
+              content: msg.content,
+              sender: msg.role,
+              timestamp: new Date()
+            }))
+          );
+        });
+    } catch (e) {
+      setError('Failed to send message');
+    }
+    setLoading(false);
   };
 
   return (
@@ -105,7 +122,6 @@ export const ChatInterface = ({ initialPrompt, onCollapse }: ChatInterfaceProps)
               <p className="text-xs text-muted-foreground">Ready to code</p>
             </div>
           </div>
-          
           <div className="flex items-center space-x-1">
             <Button 
               variant="ghost" 
@@ -126,7 +142,6 @@ export const ChatInterface = ({ initialPrompt, onCollapse }: ChatInterfaceProps)
           </div>
         </div>
       </div>
-
       {/* Messages */}
       {showHistory && (
         <div className="p-4 border-b border-border bg-muted/20">
@@ -144,9 +159,13 @@ export const ChatInterface = ({ initialPrompt, onCollapse }: ChatInterfaceProps)
           </div>
         </div>
       )}
-      
       <ScrollArea className="flex-1 p-4">
+        {loading && <div className="text-muted-foreground text-center py-4">Loading...</div>}
+        {error && <div className="text-red-500 text-center py-2">{error}</div>}
         <div className="space-y-4">
+          {messages.length === 0 && !loading && !error && (
+            <div className="text-muted-foreground text-center py-8">No messages yet. Start the conversation!</div>
+          )}
           {messages.map((message) => (
             <div
               key={message.id}
@@ -166,7 +185,6 @@ export const ChatInterface = ({ initialPrompt, onCollapse }: ChatInterfaceProps)
                     <Bot className="w-4 h-4 text-foreground" />
                   )}
                 </div>
-                
                 <div className={`rounded-lg p-3 ${
                   message.sender === 'user'
                     ? 'bg-message-user text-primary-foreground'
@@ -189,7 +207,6 @@ export const ChatInterface = ({ initialPrompt, onCollapse }: ChatInterfaceProps)
           ))}
         </div>
       </ScrollArea>
-
       {/* Input */}
       <div className="p-4 border-t border-border">
         <div className="flex space-x-2">
@@ -198,14 +215,15 @@ export const ChatInterface = ({ initialPrompt, onCollapse }: ChatInterfaceProps)
             onChange={(e) => setInputValue(e.target.value)}
             placeholder="Describe what you want to build..."
             className="flex-1 bg-input border-border"
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            onKeyPress={(e) => e.key === 'Enter' && !loading && handleSendMessage()}
           />
           <Button 
             onClick={handleSendMessage}
             className="bg-gradient-primary hover:opacity-90 transition-opacity"
             size="sm"
+            disabled={loading}
           >
-            <Send className="w-4 h-4" />
+            {loading ? '...' : <Send className="w-4 h-4" />}
           </Button>
         </div>
       </div>

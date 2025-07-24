@@ -22,3 +22,18 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Environment variables
+.env
+.env.*
+
+# Build output
+build
+coverage
+
+# Bun
+bun.lockb
+
+# Misc
+*.swp
+*.swo

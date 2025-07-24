@@ -1,0 +1,38 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtualenv
+venv/
+ENV/
+.env
+.env.*
+
+# Database
+*.db
+chat_data.db
+
+# Vector store
+vector_store/
+
+# Uploads
+uploads/
+
+# VSCode/IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Test
+*.pytest_cache/
+
+# Misc
+*.swp
+*.swo 
