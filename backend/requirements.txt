@@ -1,0 +1,26 @@
+fastapi
+pydantic
+uvicorn
+langchain
+langchain-ollama
+langchain-chroma
+langchain-community
+langchain-core
+langchain_text_splitters
+fastembed
+pdfplumber
+chromadb
+pymupdf
+python-multipart
+aiofiles
+python-docx
+pandas
+openpyxl
+xlrd
+# Local speech recognition dependencies
+openai-whisper
+torch
+torchaudio
+numpy
+ffmpeg-python
+python-magic-bin

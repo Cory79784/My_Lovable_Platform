@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+
+# Virtualenv
+venv/
+ENV/
+.env
+.env.*
+
+# Database
+*.db
+chat_data.db
+
+# Vector store
+vector_store/
+
+# Uploads
+uploads/
+
+# VSCode/IDE
+.vscode/
+.idea/
+.DS_Store
+
+# Logs
+*.log
+logs/
+
+# Test
+*.pytest_cache/
+
+# Misc
+*.swp
+*.swo 
+
+# GPT Engineer generated projects
+
+gpt_projects/ 
+# Node.js dependencies
+node_modules/
+**/node_modules/
+gpt-engineer/personal-portfolio/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log* 
