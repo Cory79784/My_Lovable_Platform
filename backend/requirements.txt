@@ -24,3 +24,4 @@ torchaudio
 numpy
 ffmpeg-python
 python-magic-bin
+wexpect

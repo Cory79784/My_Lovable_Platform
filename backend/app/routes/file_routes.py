@@ -173,3 +173,103 @@ async def upload_file(chat_id: str, file: UploadFile = File(...)):
     except Exception as e:
         logging.error(f"Upload error: {e}")
         raise HTTPException(500, "File processing failed") from e
+
+# ==================== 项目文件读取 API ====================
+from fastapi import HTTPException
+from pydantic import BaseModel
+from typing import List, Dict, Any
+
+class FileContentResponse(BaseModel):
+    content: str
+    language: str
+    path: str
+
+class ProjectListResponse(BaseModel):
+    projects: List[str]
+
+class FileTreeResponse(BaseModel):
+    tree: List[Dict[str, Any]]
+
+@router.get("/projects", response_model=ProjectListResponse)
+async def get_projects():
+    """获取所有项目列表"""
+    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../gpt_projects"))
+    if not os.path.exists(BASE_DIR):
+        return ProjectListResponse(projects=[])
+    projects = []
+    for entry in os.scandir(BASE_DIR):
+        if entry.is_dir():
+            projects.append(entry.name)
+    return ProjectListResponse(projects=sorted(projects))
+
+@router.get("/projects/{project_name}/tree", response_model=FileTreeResponse)
+async def get_project_tree(project_name: str):
+    """获取项目的文件树结构（不包含文件内容）"""
+    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../gpt_projects"))
+    project_path = os.path.join(BASE_DIR, project_name)
+    if not os.path.exists(project_path):
+        raise HTTPException(status_code=404, detail="Project not found")
+    def build_tree(path: str, relative_path: str = "") -> List[Dict[str, Any]]:
+        tree = []
+        for entry in os.scandir(path):
+            if entry.is_dir():
+                tree.append({
+                    "type": "folder",
+                    "name": entry.name,
+                    "path": os.path.join(relative_path, entry.name).replace("\\", "/"),
+                    "children": build_tree(entry.path, os.path.join(relative_path, entry.name))
+                })
+            else:
+                tree.append({
+                    "type": "file",
+                    "name": entry.name,
+                    "path": os.path.join(relative_path, entry.name).replace("\\", "/")
+                })
+        return tree
+    tree = build_tree(project_path)
+    return FileTreeResponse(tree=tree)
+
+@router.get("/projects/{project_name}/file", response_model=FileContentResponse)
+async def get_file_content(project_name: str, file_path: str):
+    """获取项目中的单个文件内容"""
+    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../gpt_projects"))
+    project_path = os.path.join(BASE_DIR, project_name)
+    full_file_path = os.path.join(project_path, file_path)
+    if not os.path.exists(project_path):
+        raise HTTPException(status_code=404, detail="Project not found")
+    if not os.path.exists(full_file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+    # 防止路径遍历攻击
+    try:
+        full_file_path = os.path.abspath(full_file_path)
+        if not full_file_path.startswith(os.path.abspath(project_path)):
+            raise HTTPException(status_code=403, detail="Access denied")
+    except Exception:
+        raise HTTPException(status_code=403, detail="Invalid file path")
+    try:
+        with open(full_file_path, "r", encoding="utf-8", errors="ignore") as f:
+            content = f.read()
+        ext = os.path.splitext(file_path)[1].lower()
+        language_map = {
+            '.js': 'javascript', '.jsx': 'javascript',
+            '.ts': 'typescript', '.tsx': 'typescript',
+            '.html': 'html', '.htm': 'html',
+            '.css': 'css', '.scss': 'scss', '.sass': 'sass',
+            '.json': 'json', '.py': 'python',
+            '.java': 'java', '.cpp': 'cpp', '.c': 'c',
+            '.php': 'php', '.rb': 'ruby', '.go': 'go',
+            '.rs': 'rust', '.sql': 'sql', '.md': 'markdown',
+            '.txt': 'plaintext', '.xml': 'xml',
+            '.yaml': 'yaml', '.yml': 'yaml',
+            '.toml': 'toml', '.ini': 'ini',
+            '.sh': 'shell', '.bash': 'shell', '.zsh': 'shell',
+            '.ps1': 'powershell', '.bat': 'batch', '.cmd': 'batch'
+        }
+        language = language_map.get(ext, 'plaintext')
+        return FileContentResponse(
+            content=content,
+            language=language,
+            path=file_path
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error reading file: {str(e)}")

@@ -1,0 +1,200 @@
+
+2025-07-25T21:47:34.023689
+================================ System Message ================================
+
+You will get information about a codebase that is currently on disk in the current folder.
+The user will ask you to write a script that runs the code in a specific way.
+You will answer with code blocks that include all the necessary terminal commands.
+Do not install globally. Do not use sudo.
+Do not explain the code, just give the commands.
+Do not use placeholders, use example values (like . for a folder argument) if necessary.
+
+
+================================ Human Message =================================
+
+
+        Make a unix script that
+        a) installs dependencies
+        b) runs all necessary parts of the codebase (in parallel if necessary)
+        
+Information about the codebase:
+
+```
+File: App
+1 npx create-react-app todo-list
+2 cd todo-list
+
+File: dependencies
+1 npm install -D tailwindcss postcss autoprefixer
+2 npx tailwindcss init
+
+File: tailwind.config.js
+1 module.exports = {
+2   purge: ['./src/**/*.{js,jsx,ts,tsx}', './public/index.html'],
+3   darkMode: false, // or 'media' or 'class'
+4   theme: {
+5     extend: {},
+6   },
+7   variants: {
+8     extend: {},
+9   },
+10   plugins: [],
+11 }
+
+File: src/index.css
+1 @tailwind base;
+2 @tailwind components;
+3 @tailwind utilities;
+
+File: src/App.js
+1 import React, { useState } from 'react';
+2 import TodoList from './TodoList';
+3 import AddTodo from './AddTodo';
+4 
+5 function App() {
+6   const [todos, setTodos] = useState([]);
+7 
+8   const addTodo = (todo) => {
+9     setTodos([...todos, todo]);
+10   };
+11 
+12   const removeTodo = (index) => {
+13     const newTodos = [...todos];
+14     newTodos.splice(index, 1);
+15     setTodos(newTodos);
+16   };
+17 
+18   return (
+19     <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+20       <div className="bg-white p-6 rounded shadow-md w-full max-w-md">
+21         <h1 className="text-2xl font-bold mb-4">To-Do List</h1>
+22         <AddTodo addTodo={addTodo} />
+23         <TodoList todos={todos} removeTodo={removeTodo} />
+24       </div>
+25     </div>
+26   );
+27 }
+28 
+29 export default App;
+
+File: src/TodoList.js
+1 import React from 'react';
+2 import TodoItem from './TodoItem';
+3 
+4 function TodoList({ todos, removeTodo }) {
+5   return (
+6     <ul className="list-disc pl-5">
+7       {todos.map((todo, index) => (
+8         <TodoItem key={index} index={index} todo={todo} removeTodo={removeTodo} />
+9       ))}
+10     </ul>
+11   );
+12 }
+13 
+14 export default TodoList;
+
+File: src/TodoItem.js
+1 import React from 'react';
+2 
+3 function TodoItem({ todo, index, removeTodo }) {
+4   return (
+5     <li className="flex justify-between items-center mb-2">
+6       <span>{todo}</span>
+7       <button
+8         onClick={() => removeTodo(index)}
+9         className="bg-red-500 text-white px-2 py-1 rounded"
+10       >
+11         Remove
+12       </button>
+13     </li>
+14   );
+15 }
+16 
+17 export default TodoItem;
+
+File: src/AddTodo.js
+1 import React, { useState } from 'react';
+2 
+3 function AddTodo({ addTodo }) {
+4   const [value, setValue] = useState('');
+5 
+6   const handleSubmit = (e) => {
+7     e.preventDefault();
+8     if (!value) return;
+9     addTodo(value);
+10     setValue('');
+11   };
+12 
+13   return (
+14     <form onSubmit={handleSubmit} className="mb-4">
+15       <input
+16         type="text"
+17         className="border p-2 rounded w-full"
+18         value={value}
+19         onChange={(e) => setValue(e.target.value)}
+20         placeholder="Add a new task"
+21       />
+22       <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded mt-2">
+23         Add
+24       </button>
+25     </form>
+26   );
+27 }
+28 
+29 export default AddTodo;
+
+File: package.json
+1 {
+2   "name": "todo-list",
+3   "version": "0.1.0",
+4   "private": true,
+5   "dependencies": {
+6     "react": "^17.0.2",
+7     "react-dom": "^17.0.2",
+8     "react-scripts": "4.0.3",
+9     "autoprefixer": "^10.2.6",
+10     "postcss": "^8.3.5",
+11     "tailwindcss": "^2.1.4"
+12   },
+13   "scripts": {
+14     "start": "react-scripts start",
+15     "build": "react-scripts build",
+16     "test": "react-scripts test",
+17     "eject": "react-scripts eject"
+18   },
+19   "eslintConfig": {
+20     "extends": [
+21       "react-app",
+22       "react-app/jest"
+23     ]
+24   },
+25   "browserslist": {
+26     "production": [
+27       ">0.2%",
+28       "not dead",
+29       "not op_mini all"
+30     ],
+31     "development": [
+32       "last 1 chrome version",
+33       "last 1 firefox version",
+34       "last 1 safari version"
+35     ]
+36   }
+37 }
+
+File: server
+1 npm start
+
+```
+
+================================== Ai Message ==================================
+
+```bash
+#!/bin/bash
+
+# Step a: Install dependencies
+npm install
+
+# Step b: Run the codebase
+npm start
+```

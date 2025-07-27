@@ -249,6 +249,100 @@ async def generate_project(data: GenerateProjectRequest = Body(...)):
 
 @router.post("/generate-project/stream")
 async def generate_project_stream(data: GenerateProjectRequest = Body(...)):
+    import os
+    import wexpect
+
+    project_name = data.project_name
+    prompt = data.prompt
+    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../gpt_projects"))
+    os.makedirs(BASE_DIR, exist_ok=True)
+    project_path = os.path.join(BASE_DIR, project_name)
+    os.makedirs(project_path, exist_ok=True)
+
+    with open(os.path.join(project_path, "main_prompt"), "w", encoding="utf-8") as f:
+        f.write(prompt)
+
+    def stream_logs():
+        yield f"Starting gpt-engineer for project: {project_name}\n"
+        yield f"Project path: {project_path}\n"
+        yield f"Working directory: {BASE_DIR}\n"
+
+        # 启动子进程
+        child = wexpect.spawn(f'gpt-engineer "{project_path}"', cwd=BASE_DIR, encoding='utf-8', timeout=120)
+        yield "gpt-engineer process started\n"
+
+        # 等待启动提示
+        try:
+            child.expect_exact('Running gpt-engineer in', timeout=10)
+            yield child.before + child.after
+            yield child.readline()  # 输出路径信息
+        except wexpect.TIMEOUT:
+            yield "Warning: Could not find startup message\n"
+
+        # 检测提示语
+        prompt_patterns = [
+            'What application do you want gpt-engineer to generate?',
+            'What application do you want gpt-engineer to generate',
+            'Please describe what you want to build',
+            'What do you want to build',
+            'Enter your prompt'
+        ]
+
+        prompt_found = False
+        for pattern in prompt_patterns:
+            try:
+                child.expect(pattern, timeout=5)
+                yield f"Found prompt pattern: {pattern}\n"
+                child.sendline(prompt)
+                prompt_found = True
+                break
+            except wexpect.TIMEOUT:
+                continue
+            except wexpect.EOF:
+                yield "Process ended unexpectedly\n"
+                break
+
+        if not prompt_found:
+            yield "Warning: Could not find prompt input pattern, trying to send prompt anyway\n"
+            child.sendline(prompt)
+
+        # >>> 新增：处理 "Do you want to execute this code? (Y/n)" <<<
+        try:
+            child.expect("Do you want to execute this code? (Y/n)", timeout=10)
+            yield "Found execute confirmation prompt, answering 'n'\n"
+            child.sendline("n")  
+        except wexpect.TIMEOUT:
+            yield "No execute confirmation prompt found, continuing\n"
+
+        # >>> 新增：处理 "Is it ok if we store your prompts to help improve GPT Engineer? (y/n)" <<<
+        try:
+            child.expect("Is it ok if we store your prompts to help improve GPT Engineer? (y/n)", timeout=10)
+            yield "Found prompt storage confirmation, answering 'n'\n"
+            child.sendline("n")
+        except wexpect.TIMEOUT:
+            yield "No prompt storage confirmation found, continuing\n"
+
+
+        # 实时输出剩余内容
+        while True:
+            try:
+                line = child.readline()
+                if not line:
+                    break
+                yield line
+            except wexpect.EOF:
+                break
+            except wexpect.TIMEOUT:
+                yield "Timeout waiting for output\n"
+                break
+
+        child.close()
+        yield f"\nProcess finished with return code: {child.exitstatus}\n"
+
+    return StreamingResponse(stream_logs(), media_type="text/plain")
+
+    # 旧的 subprocess 代码已注释保留
+    '''
     import subprocess
     import time
     project_name = data.project_name
@@ -281,3 +375,4 @@ async def generate_project_stream(data: GenerateProjectRequest = Body(...)):
         process.wait()
         yield f"\nProcess finished with return code: {process.returncode}\n"
     return StreamingResponse(stream_logs(), media_type="text/plain")
+    '''
