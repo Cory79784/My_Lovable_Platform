@@ -19,7 +19,7 @@ const WorkspaceOverview = () => {
   const handleCreateNewChat = async () => {
     try {
       // Create new chat via API
-      const response = await fetch('http://127.0.0.1:8000/chat/new_chat', {
+      const response = await fetch('http://127.0.0.1:8001/chat/new_chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' }
       });

@@ -1,16 +1,17 @@
 # My Lovable Platform
 
-A comprehensive AI-powered development platform that integrates gpt-engineer with streaming capabilities and real-time project preview using iframes.
+This project is my own way to reproduce the core workflow of [lovable.dev](https://lovable.dev/) — A comprehensive AI-powered development platform that integrates gpt-engineer with streaming capabilities and real-time project preview using iframes. Not affiliated with the original Lovable.
 
 ## 🚀 Features
 
 ### Core Functionality
 - **Multi-dialogue Chat System** - Support for multiple concurrent chat sessions
-- **gpt-engineer Integration** - Automated project generation using Python subprocess
+- **gpt-engineer Integration** - Automated project generation using Python subprocess (https://github.com/AntonOsika/gpt-engineer)
 - **Streaming Logs** - Real-time output streaming from gpt-engineer to frontend
 - **Iframe Project Preview** - Automatic display and refresh of generated projects
 - **File Upload & Processing** - Support for PDF, DOCX, Excel, and CSV files
 - **Vector Database Integration** - RAG (Retrieval-Augmented Generation) capabilities
+- **Semantic shadcn/ui wrapper**: Aim to ensure a consistent look and feel, improving visual quality  
 
 ### Project Preview Features
 - **Automatic Refresh** - Iframe automatically refreshes after each generation
@@ -51,13 +52,12 @@ A comprehensive AI-powered development platform that integrates gpt-engineer wit
 cd backend
 pip install -r requirements.txt
 python -m uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-uvicorn app.main:app --host 127.0.0.1 --port 8000 --env-file .env
 ```
 
 ### Frontend Setup
 ```bash
-   cd frontend
-   npm install
+cd frontend
+npm install
 npm run dev
 ```
 
@@ -88,6 +88,7 @@ curl -X POST "http://localhost:8000/chat/generate-project" \
 
 ### 2. Streaming Project Generation
 **Test Case:** Generate project with streaming output
+
 ```bash
 # Backend test
 curl -X POST "http://localhost:8000/chat/generate-project/stream" \
@@ -351,6 +352,18 @@ curl -v "http://localhost:8000/api/projects"
 3. Add tests for new functionality
 4. Ensure all tests pass
 5. Submit a pull request
+
+## Current Issues / Blockers
+
+1. Subprocess Integration with GPT Engineer
+   - Current implementation relies on CLI calls via `subprocess`, which is fragile and error-prone.  
+   - Issues include alias mismatch, unnecessary stdin handling, working directory problems, and environment variable setup.  
+   - Better Approach: Extract a dedicated Python function or use an official library (no stable ones found yet).
+
+2. Iframe Rendering for Complex Builds  
+   - Simple static builds render correctly, but framework-based builds fail.  
+   - Causes include routing issues, absolute asset paths, and CSP restrictions.  
+   - work around: Requires additional build configuration or running a local server.
 
 ## 📄 License
 

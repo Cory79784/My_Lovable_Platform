@@ -87,13 +87,21 @@ const Landing = () => {
     setCreating(false);
   };
 
-  // 点击已有项目卡片
+  // Click on existing project card
   const handleProjectClick = (project: any) => {
+    // Try to get the actual project folder name
+    let projectFolderName = `project_${project.chat_id}`;
+    
+    // If we have project_path from the backend, use it
+    if (project.project_path) {
+      projectFolderName = project.project_path;
+    }
+    
     navigate("/workspace", { 
       state: { 
         chat_id: project.chat_id, 
         initialPrompt: undefined,
-        projectName: `project_${project.chat_id}`,
+        projectName: projectFolderName,
         isGenerating: false
       } 
     });
