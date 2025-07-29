@@ -1,8 +1,9 @@
 import os
 import sys
+from datetime import datetime
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
-from app.models import ChatRequest, ChatResponse, ChatSummary, ChatDetail
+from app.models import ChatRequest, ChatResponse, ChatSummary, ChatDetail, RenameChatRequest
 from app.utils import create_retriever, create_chain, create_new_conversation, get_llm, save_conversations, load_conversations
 from app.database import save_message, get_db_connection
 import asyncio
@@ -46,6 +47,9 @@ llm = get_llm()
 VECTOR_STORE_DIR = "./vector_store"
 VECTOR_STORE_NAME = "simple-rag"
 EMBEDDING_MODEL = "text-embedding-ada-002"
+
+# Base directory for projects
+BASE_PROJECTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../gpt_projects"))
 
 # Load conversations from storage
 conversations = load_conversations(llm)
@@ -164,15 +168,209 @@ async def chat(request: ChatRequest):
 async def new_chat():
     try:
         chat_id = create_new_conversation(conversations, llm, VECTOR_STORE_DIR, EMBEDDING_MODEL)
+        print(f"Created new chat with ID: {chat_id}")
+        
+        # Verify the chat was created in database
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT title FROM chats WHERE chat_id = ?", (chat_id,))
+            result = cursor.fetchone()
+            if result:
+                print(f"Chat {chat_id} title in database: {result[0]}")
+            else:
+                print(f"Chat {chat_id} not found in database!")
+        
         return {"chat_id": chat_id}
     except Exception as e:
         print("Error creating a new chat:", str(e))
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/debug/chats")
+async def debug_chats():
+    """Debug endpoint to see all chats in database"""
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT chat_id, title FROM chats")
+            chats = cursor.fetchall()
+            print(f"Debug: Found {len(chats)} chats in database")
+            for chat_id, title in chats:
+                print(f"  Chat {chat_id}: {title}")
+            return {"chats": [{"chat_id": chat_id, "title": title} for chat_id, title in chats]}
+    except Exception as e:
+        print(f"Debug error: {e}")
+        return {"error": str(e)}
+
+@router.post("/remix-project")
+async def remix_project(request: dict):
+    """Remix a community project by creating a new chat with the project files"""
+    try:
+        project_name = request.get("project_name")
+        project_description = request.get("project_description", "")
+        original_author = request.get("original_author", "Community")
+        
+        # Create a new chat
+        chat_id = create_new_conversation(conversations, llm, VECTOR_STORE_DIR, EMBEDDING_MODEL)
+        print(f"Created new chat for remix: {chat_id}")
+        
+        # Set a descriptive title for the remixed project
+        remix_title = f"Remix: {project_name}"
+        
+        # Update the chat title in database
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "UPDATE chats SET title = ? WHERE chat_id = ?",
+                (remix_title, chat_id)
+            )
+            conn.commit()
+            print(f"Updated chat {chat_id} title to: {remix_title}")
+        
+        # Read the actual main_prompt file from the project
+        main_prompt_content = ""
+        try:
+            project_path = os.path.join(BASE_PROJECTS_DIR, project_name)
+            main_prompt_path = os.path.join(project_path, "main_prompt")
+            if os.path.exists(main_prompt_path):
+                with open(main_prompt_path, 'r', encoding='utf-8') as f:
+                    main_prompt_content = f.read().strip()
+                print(f"Read main_prompt from {project_name}: {len(main_prompt_content)} characters")
+            else:
+                print(f"main_prompt file not found for {project_name}")
+        except Exception as e:
+            print(f"Error reading main_prompt: {e}")
+            main_prompt_content = f"Original prompt for {project_name} project"
+        
+        # Create the initial remix message with the actual prompt
+        initial_message = f"I want to remix the '{project_name}' project by {original_author}. {project_description}\n\nOriginal prompt:\n{main_prompt_content}"
+        
+        # Add the message to the conversation
+        if chat_id in conversations:
+            conversations[chat_id]["memory"].add_message({"role": "user", "content": initial_message})
+            print(f"Added remix message to chat {chat_id}")
+        else:
+            print(f"Warning: chat_id {chat_id} not found in conversations after creation")
+        
+        # Save the message to database
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT INTO messages (chat_id, role, content, created_at) VALUES (?, ?, ?, ?)",
+                (chat_id, "user", initial_message, datetime.now().isoformat())
+            )
+            conn.commit()
+            print(f"Saved remix message to database for chat {chat_id}")
+        
+        return {
+            "chat_id": chat_id,
+            "title": remix_title,
+            "message": "Project remixed successfully"
+        }
+        
+    except Exception as e:
+        print(f"Error remixing project: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to remix project: {str(e)}")
+
+def get_project_context(project_name: str) -> str:
+    """Get sample project context for community projects"""
+    project_contexts = {
+        "pulse-robot-template": """This is an interactive robot animation template with:
+- HTML5 Canvas for smooth animations
+- CSS animations for robot movements
+- JavaScript for interactive controls
+- Responsive design for mobile devices
+
+Key features:
+- Pulsing robot animation
+- Interactive controls
+- Smooth transitions
+- Mobile-friendly design""",
+        
+        "cryptocurrency-trading-dashboard": """This is a real-time crypto trading interface with:
+- Real-time price data from APIs
+- Interactive charts and graphs
+- Portfolio tracking
+- Trading simulation
+
+Key features:
+- Live price updates
+- Interactive charts
+- Portfolio management
+- Trading history""",
+        
+        "wrlds-ai-integration": """This is an AI-powered world building tool with:
+- AI-generated content
+- Interactive world maps
+- Character generation
+- Story elements
+
+Key features:
+- AI content generation
+- Interactive maps
+- Character creation
+- Story development""",
+        
+        "crypto-trade-template": """This is a secure crypto trading platform with:
+- User authentication
+- Secure trading interface
+- Portfolio management
+- Transaction history
+
+Key features:
+- Secure authentication
+- Trading interface
+- Portfolio tracking
+- Transaction logs"""
+    }
+    
+    return project_contexts.get(project_name, f"Sample project: {project_name}")
+
 @router.get("/chats", response_model=list[ChatSummary])
 async def get_chats():
     try:
-        chat_summaries = [{"chat_id": chat_id, "title": data["title"]} for chat_id, data in conversations.items()]
+        chat_summaries = []
+        for chat_id, data in conversations.items():
+            # Get message count and title from database
+            try:
+                with get_db_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT COUNT(*) FROM messages WHERE chat_id = ?", (chat_id,))
+                    message_count = cursor.fetchone()[0]
+                    print(f"Chat {chat_id}: message_count from DB = {message_count}")
+                    
+                    # Get title from database
+                    cursor.execute("SELECT title FROM chats WHERE chat_id = ?", (chat_id,))
+                    title_result = cursor.fetchone()
+                    title = title_result[0] if title_result else "Untitled Chat"
+                    print(f"Chat {chat_id}: title from DB = {title}")
+            except Exception as e:
+                print(f"Error getting message count/title for chat {chat_id}: {e}")
+                message_count = 0
+                title = "Untitled Chat"
+            
+            # Check if chat has associated project
+            has_project = False
+            if chat_id in chat_file_mapping and chat_file_mapping[chat_id]:
+                has_project = True
+            
+            # Get last updated time from database
+            try:
+                with get_db_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("SELECT MAX(created_at) FROM messages WHERE chat_id = ?", (chat_id,))
+                    result = cursor.fetchone()
+                    last_updated = result[0] if result and result[0] else datetime.now().isoformat()
+            except Exception as e:
+                print(f"Error getting last updated for chat {chat_id}: {e}")
+                last_updated = datetime.now().isoformat()
+            
+            chat_summaries.append({
+                "chat_id": chat_id, 
+                "title": title,
+                "message_count": message_count,
+                "has_project": has_project,
+                "last_updated": last_updated
+            })
         return chat_summaries
     except Exception as e:
         print("Error fetching chats:", str(e))
@@ -183,6 +381,19 @@ async def get_chat_history(chat_id: str):
     if chat_id not in conversations:
         raise HTTPException(status_code=404, detail="Chat ID not found.")
     memory = conversations[chat_id]["memory"]
+    
+    # Get title from database
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT title FROM chats WHERE chat_id = ?", (chat_id,))
+            title_result = cursor.fetchone()
+            title = title_result[0] if title_result else "Untitled Chat"
+            print(f"Chat {chat_id}: title from DB = {title}")
+    except Exception as e:
+        print(f"Error getting title for chat {chat_id}: {e}")
+        title = "Untitled Chat"
+    
     print("Memory object1:", memory)  # Debug print to check memory object
     messages = []
     for message in memory.messages:
@@ -190,7 +401,7 @@ async def get_chat_history(chat_id: str):
         role = message["role"] if isinstance(message, dict) else getattr(message, "role", None)
         content = message["content"] if isinstance(message, dict) else getattr(message, "content", None)
         messages.append({"role": role, "content": content})
-    return {"chat_id": chat_id, "messages": messages}
+    return {"chat_id": chat_id, "title": title, "messages": messages}
 
 @router.delete("/{chat_id}")
 async def delete_chat(chat_id: str):
@@ -213,6 +424,41 @@ async def delete_chat(chat_id: str):
     if chat_id in chat_file_mapping:
         del chat_file_mapping[chat_id]
     return {"success": True}
+
+@router.put("/{chat_id}/rename")
+async def rename_chat(chat_id: str, request: RenameChatRequest):
+    """Rename a chat session"""
+    try:
+        print(f"Renaming chat {chat_id} to '{request.title}'")
+        
+        # Check if chat exists in database
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT chat_id FROM chats WHERE chat_id = ?", (chat_id,))
+            if not cursor.fetchone():
+                raise HTTPException(status_code=404, detail=f"Chat {chat_id} not found")
+            
+            # Update in database
+            cursor.execute(
+                "UPDATE chats SET title = ? WHERE chat_id = ?", 
+                (request.title, chat_id)
+            )
+            conn.commit()
+            print(f"Database updated for chat {chat_id}")
+            
+        # Update in memory if exists
+        if chat_id in conversations:
+            conversations[chat_id]["title"] = request.title
+            print(f"Memory updated for chat {chat_id}")
+        else:
+            print(f"Chat {chat_id} not found in memory")
+                
+        return {"success": True, "title": request.title}
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"Error renaming chat {chat_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to rename chat: {str(e)}")
 
 class GenerateProjectRequest(BaseModel):
     project_name: str

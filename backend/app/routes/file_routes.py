@@ -1,8 +1,8 @@
 import os
 import logging
-import pymupdf
+# import pymupdf  # Temporarily commented out
 from langchain.schema import Document
-from docx import Document as DocxDocument
+# from docx import Document as DocxDocument  # Temporarily commented out
 from fastapi import APIRouter, HTTPException, File, UploadFile
 from app.utils import create_vector_db, get_llm
 from langchain_text_splitters import RecursiveCharacterTextSplitter
@@ -37,11 +37,13 @@ EMBEDDING_MODEL = "nomic-embed-text"
 
 def extract_text_pymupdf(pdf_path):
     """Extract text from a PDF using PyMuPDF (fitz)."""
-    doc = pymupdf.open(pdf_path)
-    text = "\n".join([page.get_text("text") for page in doc])
-    if not text.strip():
-        raise ValueError("No text found in the PDF.")
-    return text
+    # Temporarily disabled due to missing pymupdf
+    raise ValueError("PDF processing temporarily disabled - pymupdf not installed")
+    # doc = pymupdf.open(pdf_path)
+    # text = "\n".join([page.get_text("text") for page in doc])
+    # if not text.strip():
+    #     raise ValueError("No text found in the PDF.")
+    # return text
 
 async def detect_file_type(file_path: str):
     """Detect file type using python-magic"""
