@@ -17,6 +17,9 @@ class ChatHistoryResponse(BaseModel):
 class ChatSummary(BaseModel):
     chat_id: str
     title: str
+    last_updated: str | None = None
+    message_count: int = 0
+    has_project: bool = False
 
 class ChatDetail(BaseModel):
     chat_id: str

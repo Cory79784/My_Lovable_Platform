@@ -1,0 +1,11 @@
+Create a modern crypto trading dashboard with real-time price charts, portfolio management, and trading interface. The application should include:
+
+- Real-time cryptocurrency price tracking
+- Interactive charts and graphs
+- Portfolio overview with profit/loss tracking
+- Trading interface with buy/sell functionality
+- Market news and updates
+- Responsive design for mobile and desktop
+- Dark theme with modern UI components
+
+Use Vite, React, TypeScript, and shadcn/ui components for a professional trading platform experience. 

@@ -15,41 +15,65 @@ interface ChatInterfaceProps {
   initialPrompt?: string;
   chat_id?: string;
   onCollapse?: () => void;
+  chatTitle?: string;
 }
 
-export const ChatInterface = ({ initialPrompt, chat_id, onCollapse }: ChatInterfaceProps) => {
+export const ChatInterface = ({ initialPrompt, chat_id, onCollapse, chatTitle }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [showHistory, setShowHistory] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // 获取历史消息
+  const [currentChatTitle, setCurrentChatTitle] = useState<string>(chatTitle || 'New Chat');
+  
+  // Set default title for new chats
   useEffect(() => {
-    if (!chat_id) return;
-    setLoading(true);
-    setError(null);
-    fetch(`http://127.0.0.1:8000/chat/${chat_id}`)
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to load');
-        return res.json();
-      })
-      .then(data => {
-        setMessages(
-          data.messages.map((msg: any, idx: number) => ({
-            id: idx + '',
-            content: msg.content,
-            sender: msg.role,
-            timestamp: new Date()
-          }))
-        );
-        setLoading(false);
-      })
-      .catch(() => {
-        setError('Failed to load chat history');
-        setLoading(false);
-      });
+    if (!chat_id) {
+      setCurrentChatTitle('New Chat');
+    }
   }, [chat_id]);
+
+      // Fetch chat title and history
+    useEffect(() => {
+      if (!chat_id) return;
+      setLoading(true);
+      setError(null);
+      
+      console.log('Fetching chat data for chat_id:', chat_id);
+      
+      // Fetch chat history (includes title)
+      fetch(`http://127.0.0.1:8000/chat/${chat_id}`)
+        .then(res => {
+          if (!res.ok) throw new Error('Failed to load');
+          return res.json();
+        })
+        .then(data => {
+          console.log('Chat data received:', data);
+          // Update chat title from response
+          if (data.title) {
+            console.log('Setting chat title to:', data.title);
+            setCurrentChatTitle(data.title);
+          } else {
+            console.log('No title in response, using default');
+            setCurrentChatTitle('Untitled Chat');
+          }
+          
+          setMessages(
+            data.messages.map((msg: any, idx: number) => ({
+              id: idx + '',
+              content: msg.content,
+              sender: msg.role,
+              timestamp: new Date()
+            }))
+          );
+          setLoading(false);
+        })
+        .catch((error) => {
+          console.error('Error fetching chat data:', error);
+          setError('Failed to load chat history');
+          setLoading(false);
+        });
+    }, [chat_id]);
 
   // 发送消息
   const handleSendMessage = async () => {
@@ -118,8 +142,10 @@ export const ChatInterface = ({ initialPrompt, chat_id, onCollapse }: ChatInterf
               <Bot className="w-5 h-5 text-primary-foreground" />
             </div>
             <div>
-              <h3 className="font-medium text-foreground">AI Assistant</h3>
-              <p className="text-xs text-muted-foreground">Ready to code</p>
+              <h3 className="font-medium text-foreground">{currentChatTitle}</h3>
+              <p className="text-xs text-muted-foreground">
+                {chat_id ? `Chat ID: ${chat_id.slice(0, 8)}...` : 'Starting new conversation...'}
+              </p>
             </div>
           </div>
           <div className="flex items-center space-x-1">

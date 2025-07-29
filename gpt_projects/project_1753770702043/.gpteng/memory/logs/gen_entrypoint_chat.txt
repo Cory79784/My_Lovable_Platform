@@ -1,0 +1,276 @@
+
+2025-07-29T08:32:10.652781
+================================ System Message ================================
+
+You will get information about a codebase that is currently on disk in the current folder.
+The user will ask you to write a script that runs the code in a specific way.
+You will answer with code blocks that include all the necessary terminal commands.
+Do not install globally. Do not use sudo.
+Do not explain the code, just give the commands.
+Do not use placeholders, use example values (like . for a folder argument) if necessary.
+
+
+================================ Human Message =================================
+
+
+        Make a unix script that
+        a) installs dependencies
+        b) runs all necessary parts of the codebase (in parallel if necessary)
+        
+Information about the codebase:
+
+```
+File: app.py
+1 from flask import Flask
+2 from routes import init_app
+3 
+4 app = Flask(__name__)
+5 init_app(app)
+6 
+7 if __name__ == '__main__':
+8     app.run(debug=True)
+
+File: models.py
+1 from dataclasses import dataclass
+2 
+3 @dataclass
+4 class Todo:
+5     id: int
+6     title: str
+7     completed: bool
+
+File: database.py
+1 import sqlite3
+2 from models import Todo
+3 
+4 def get_db_connection():
+5     conn = sqlite3.connect('database.db')
+6     conn.row_factory = sqlite3.Row
+7     return conn
+8 
+9 def init_db():
+10     conn = get_db_connection()
+11     conn.execute('''
+12         CREATE TABLE IF NOT EXISTS todos (
+13             id INTEGER PRIMARY KEY AUTOINCREMENT,
+14             title TEXT NOT NULL,
+15             completed BOOLEAN NOT NULL CHECK (completed IN (0, 1))
+16         )
+17     ''')
+18     conn.commit()
+19     conn.close()
+20 
+21 def add_task(title: str) -> Todo:
+22     conn = get_db_connection()
+23     cursor = conn.cursor()
+24     cursor.execute('INSERT INTO todos (title, completed) VALUES (?, ?)', (title, False))
+25     conn.commit()
+26     task_id = cursor.lastrowid
+27     conn.close()
+28     return Todo(id=task_id, title=title, completed=False)
+29 
+30 def get_tasks() -> list:
+31     conn = get_db_connection()
+32     tasks = conn.execute('SELECT * FROM todos').fetchall()
+33     conn.close()
+34     return [Todo(id=row['id'], title=row['title'], completed=bool(row['completed'])) for row in tasks]
+35 
+36 def complete_task(task_id: int):
+37     conn = get_db_connection()
+38     conn.execute('UPDATE todos SET completed = ? WHERE id = ?', (True, task_id))
+39     conn.commit()
+40     conn.close()
+41 
+42 def delete_task(task_id: int):
+43     conn = get_db_connection()
+44     conn.execute('DELETE FROM todos WHERE id = ?', (task_id,))
+45     conn.commit()
+46     conn.close()
+
+File: routes.py
+1 from flask import jsonify, request
+2 from database import add_task, get_tasks, complete_task, delete_task, init_db
+3 
+4 def init_app(app):
+5     init_db()
+6 
+7     @app.route('/tasks', methods=['GET'])
+8     def list_tasks():
+9         tasks = get_tasks()
+10         return jsonify([task.__dict__ for task in tasks])
+11 
+12     @app.route('/tasks', methods=['POST'])
+13     def create_task():
+14         data = request.get_json()
+15         task = add_task(data['title'])
+16         return jsonify(task.__dict__), 201
+17 
+18     @app.route('/tasks/<int:task_id>/complete', methods=['POST'])
+19     def mark_task_complete(task_id):
+20         complete_task(task_id)
+21         return '', 204
+22 
+23     @app.route('/tasks/<int:task_id>', methods=['DELETE'])
+24     def remove_task(task_id):
+25         delete_task(task_id)
+26         return '', 204
+
+File: index.html
+1 <!DOCTYPE html>
+2 <html lang="en">
+3 <head>
+4     <meta charset="UTF-8">
+5     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+6     <title>Todo App</title>
+7     <link rel="stylesheet" href="styles.css">
+8 </head>
+9 <body>
+10     <div id="app">
+11         <h1>Todo List</h1>
+12         <input type="text" id="new-task" placeholder="Add a new task">
+13         <button id="add-task">Add Task</button>
+14         <ul id="task-list"></ul>
+15     </div>
+16     <script src="app.js"></script>
+17 </body>
+18 </html>
+
+File: styles.css
+1 body {
+2     font-family: Arial, sans-serif;
+3     background-color: #f4f4f9;
+4     color: #333;
+5     margin: 0;
+6     padding: 0;
+7 }
+8 
+9 #app {
+10     max-width: 600px;
+11     margin: 50px auto;
+12     padding: 20px;
+13     background-color: #fff;
+14     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+15 }
+16 
+17 h1 {
+18     text-align: center;
+19 }
+20 
+21 input[type="text"] {
+22     width: calc(100% - 22px);
+23     padding: 10px;
+24     margin-bottom: 10px;
+25     border: 1px solid #ddd;
+26     border-radius: 4px;
+27 }
+28 
+29 button {
+30     padding: 10px 15px;
+31     background-color: #28a745;
+32     color: #fff;
+33     border: none;
+34     border-radius: 4px;
+35     cursor: pointer;
+36 }
+37 
+38 button:hover {
+39     background-color: #218838;
+40 }
+41 
+42 ul {
+43     list-style-type: none;
+44     padding: 0;
+45 }
+46 
+47 li {
+48     padding: 10px;
+49     border-bottom: 1px solid #ddd;
+50     display: flex;
+51     justify-content: space-between;
+52     align-items: center;
+53 }
+54 
+55 li.completed {
+56     text-decoration: line-through;
+57     color: #888;
+58 }
+59 
+60 li button {
+61     background-color: #dc3545;
+62 }
+63 
+64 li button:hover {
+65     background-color: #c82333;
+66 }
+
+File: app.js
+1 document.addEventListener('DOMContentLoaded', () => {
+2     const taskList = document.getElementById('task-list');
+3     const newTaskInput = document.getElementById('new-task');
+4     const addTaskButton = document.getElementById('add-task');
+5 
+6     const fetchTasks = async () => {
+7         const response = await fetch('/tasks');
+8         const tasks = await response.json();
+9         taskList.innerHTML = '';
+10         tasks.forEach(task => {
+11             const taskItem = document.createElement('li');
+12             taskItem.textContent = task.title;
+13             taskItem.className = task.completed ? 'completed' : '';
+14             const completeButton = document.createElement('button');
+15             completeButton.textContent = 'Complete';
+16             completeButton.onclick = () => completeTask(task.id);
+17             const deleteButton = document.createElement('button');
+18             deleteButton.textContent = 'Delete';
+19             deleteButton.onclick = () => deleteTask(task.id);
+20             taskItem.appendChild(completeButton);
+21             taskItem.appendChild(deleteButton);
+22             taskList.appendChild(taskItem);
+23         });
+24     };
+25 
+26     const addTask = async () => {
+27         const title = newTaskInput.value.trim();
+28         if (title) {
+29             await fetch('/tasks', {
+30                 method: 'POST',
+31                 headers: {
+32                     'Content-Type': 'application/json'
+33                 },
+34                 body: JSON.stringify({ title })
+35             });
+36             newTaskInput.value = '';
+37             fetchTasks();
+38         }
+39     };
+40 
+41     const completeTask = async (taskId) => {
+42         await fetch(`/tasks/${taskId}/complete`, { method: 'POST' });
+43         fetchTasks();
+44     };
+45 
+46     const deleteTask = async (taskId) => {
+47         await fetch(`/tasks/${taskId}`, { method: 'DELETE' });
+48         fetchTasks();
+49     };
+50 
+51     addTaskButton.onclick = addTask;
+52     fetchTasks();
+53 });
+
+File: requirements.txt
+1 Flask==2.0.1
+
+```
+
+================================== Ai Message ==================================
+
+```bash
+#!/bin/bash
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the Flask application
+python app.py
+```

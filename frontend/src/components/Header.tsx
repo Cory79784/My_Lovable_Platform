@@ -1,19 +1,18 @@
 import { Button } from "@/components/ui/button";
-import { Code2, Settings, User, FileText, Play, Code, Github, PanelLeftOpen, Bot } from "lucide-react";
+import { Code2, Settings, User, FileText, Play, Code, Github, PanelLeftOpen, Bot, FolderOpen } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 interface HeaderProps {
-  showCodeViewer?: boolean;
-  onToggleCodeViewer?: () => void;
   isChatCollapsed?: boolean;
   onToggleChat?: () => void;
 }
 
 export const Header = ({ 
-  showCodeViewer = false, 
-  onToggleCodeViewer,
   isChatCollapsed = false,
   onToggleChat 
 }: HeaderProps) => {
+  const navigate = useNavigate();
+  
   return (
     <header className="h-12 bg-sidebar-bg border-b border-border flex items-center justify-between px-4">
       <div className="flex items-center space-x-4">
@@ -36,6 +35,15 @@ export const Header = ({
               <Bot className="w-4 h-4" />
             </Button>
           )}
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            className="text-xs"
+            onClick={() => navigate('/workspace-overview')}
+          >
+            <FolderOpen className="w-4 h-4 mr-1" />
+            Workspace
+          </Button>
           <Button variant="ghost" size="sm" className="text-xs">
             <FileText className="w-4 h-4 mr-1" />
             main.tsx
@@ -47,15 +55,6 @@ export const Header = ({
       </div>
 
       <div className="flex items-center space-x-2">
-        <Button 
-          variant={showCodeViewer ? "default" : "ghost"} 
-          size="sm"
-          onClick={onToggleCodeViewer}
-          className="text-xs"
-        >
-          <Code className="w-4 h-4 mr-1" />
-          Code
-        </Button>
         <Button variant="ghost" size="sm" className="bg-green-600 hover:bg-green-700 text-white">
           <span className="w-4 h-4 mr-1 text-white">⚡</span>
           Supabase
