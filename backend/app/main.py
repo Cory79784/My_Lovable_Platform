@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 load_dotenv()
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import chat_routes, history_routes, project_routes
+from app.routes import chat_routes, history_routes, project_routes, deploy_routes
 # from app.routes import file_routes, voice_routes  # Temporarily commented out
 from app.database import init_db
 from app.utils import get_llm, load_conversations
@@ -34,6 +34,7 @@ app.include_router(history_routes.router, prefix="/history", tags=["History"])
 # app.include_router(file_routes.router, prefix="/upload", tags=["Upload"])  # Temporarily commented out
 # app.include_router(voice_routes.router, prefix="/voice", tags=["Voice"])  # Temporarily commented out
 app.include_router(project_routes.router, prefix="/api", tags=["Projects"])
+app.include_router(deploy_routes.router, prefix="/api", tags=["Deploy"])
 
 if __name__ == "__main__":
     import uvicorn

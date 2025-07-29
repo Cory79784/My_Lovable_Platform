@@ -1,17 +1,55 @@
 import { Button } from "@/components/ui/button";
 import { Code2, Settings, User, FileText, Play, Code, Github, PanelLeftOpen, Bot, FolderOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 
 interface HeaderProps {
   isChatCollapsed?: boolean;
   onToggleChat?: () => void;
+  currentProjectName?: string; // Add current project name
 }
 
 export const Header = ({ 
   isChatCollapsed = false,
-  onToggleChat 
+  onToggleChat,
+  currentProjectName
 }: HeaderProps) => {
   const navigate = useNavigate();
+  const [isDeploying, setIsDeploying] = useState(false);
+
+  const handleGithubDeploy = async () => {
+    console.log("Starting deployment for sample-portfolio");
+    setIsDeploying(true);
+    try {
+      const requestBody = {
+        project_name: "sample-portfolio"  // Fixed project name
+      };
+      console.log("Sending request body:", requestBody);
+      
+      const response = await fetch("http://127.0.0.1:8000/api/deploy", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(requestBody),
+      });
+
+      console.log("Response status:", response.status);
+      const data = await response.json();
+      console.log("Response data:", data);
+
+      if (response.ok && data.success) {
+        alert(`Successfully deployed sample portfolio to GitHub!\nGitHub URL: ${data.github_url}`);
+      } else {
+        alert(`Deployment failed: ${data.message || "Unknown error"}`);
+      }
+    } catch (error) {
+      console.error("Deployment error:", error);
+      alert("Deployment failed. Please try again.");
+    } finally {
+      setIsDeploying(false);
+    }
+  };
   
   return (
     <header className="h-12 bg-sidebar-bg border-b border-border flex items-center justify-between px-4">
@@ -59,9 +97,15 @@ export const Header = ({
           <span className="w-4 h-4 mr-1 text-white">⚡</span>
           Supabase
         </Button>
-        <Button variant="ghost" size="sm">
+        <Button 
+          variant="ghost" 
+          size="sm"
+          onClick={handleGithubDeploy}
+          disabled={isDeploying}
+          className={isDeploying ? "opacity-50 cursor-not-allowed" : ""}
+        >
           <Github className="w-4 h-4 mr-1" />
-          GitHub
+          {isDeploying ? "Deploying..." : "GitHub"}
         </Button>
         <Button variant="ghost" size="sm">
           <Settings className="w-4 h-4" />

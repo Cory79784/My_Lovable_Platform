@@ -18,7 +18,7 @@ from fastapi import Request
 from pydantic import BaseModel
 from fastapi import Body
 
-# 递归读取文件夹，返回目录树和文件内容
+# Recursively read folder, return directory tree and file content
 import os
 
 def read_project_tree(root_path):
@@ -348,10 +348,20 @@ async def get_chats():
                 message_count = 0
                 title = "Untitled Chat"
             
-            # Check if chat has associated project
+            # Check if chat has associated project and get project path
             has_project = False
+            project_path = None
             if chat_id in chat_file_mapping and chat_file_mapping[chat_id]:
                 has_project = True
+                # Try to find the actual project folder
+                BASE_PROJECTS_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../gpt_projects"))
+                if os.path.exists(BASE_PROJECTS_DIR):
+                    # Look for project folder that contains the chat_id
+                    for project_folder in os.listdir(BASE_PROJECTS_DIR):
+                        project_folder_path = os.path.join(BASE_PROJECTS_DIR, project_folder)
+                        if os.path.isdir(project_folder_path) and chat_id in project_folder:
+                            project_path = project_folder
+                            break
             
             # Get last updated time from database
             try:
@@ -369,6 +379,7 @@ async def get_chats():
                 "title": title,
                 "message_count": message_count,
                 "has_project": has_project,
+                "project_path": project_path,
                 "last_updated": last_updated
             })
         return chat_summaries
@@ -397,7 +408,7 @@ async def get_chat_history(chat_id: str):
     print("Memory object1:", memory)  # Debug print to check memory object
     messages = []
     for message in memory.messages:
-        # 兼容dict和对象
+        # Compatible with dict and object
         role = message["role"] if isinstance(message, dict) else getattr(message, "role", None)
         content = message["content"] if isinstance(message, dict) else getattr(message, "content", None)
         messages.append({"role": role, "content": content})
@@ -405,22 +416,22 @@ async def get_chat_history(chat_id: str):
 
 @router.delete("/{chat_id}")
 async def delete_chat(chat_id: str):
-    # 删除内存中的会话
+    # Delete session from memory
     if chat_id in conversations:
         del conversations[chat_id]
-    # 删除数据库中的会话和消息
+    # Delete session and messages from database
     with get_db_connection() as conn:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM chats WHERE chat_id = ?", (chat_id,))
         cursor.execute("DELETE FROM messages WHERE chat_id = ?", (chat_id,))
         conn.commit()
-    # 删除向量库目录
+    # Delete vector store directory
     import shutil
     import os
     vector_store_path = os.path.join(VECTOR_STORE_DIR, chat_id)
     if os.path.exists(vector_store_path):
         shutil.rmtree(vector_store_path)
-    # 删除全局文件映射
+    # Delete global file mapping
     if chat_id in chat_file_mapping:
         del chat_file_mapping[chat_id]
     return {"success": True}
@@ -517,7 +528,7 @@ async def generate_project_stream(data: GenerateProjectRequest = Body(...)):
             text=True,
             bufsize=1
         )
-        # 自动把prompt再输入一遍，模拟人工输入
+        # Automatically input prompt again to simulate manual input
         process.stdin.write(prompt + "\n")
         process.stdin.flush()
         for line in iter(process.stdout.readline, ""):

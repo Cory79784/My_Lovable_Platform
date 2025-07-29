@@ -19,7 +19,7 @@ const Workspace = () => {
   const [generating, setGenerating] = useState(isGenerating);
   const [remixedProjectPath, setRemixedProjectPath] = useState<string | null>(null);
 
-  // 流式生成项目
+  // Stream project generation
   const generateProjectStream = async (prompt: string) => {
     setGenerating(true);
     try {
@@ -71,7 +71,12 @@ const Workspace = () => {
       <Header 
         isChatCollapsed={isChatCollapsed}
         onToggleChat={() => setIsChatCollapsed(!isChatCollapsed)}
+        currentProjectName={remixedProjectPath || currentProjectName}
       />
+      {/* Debug info */}
+      {console.log("Workspace - currentProjectName:", currentProjectName)}
+      {console.log("Workspace - remixedProjectPath:", remixedProjectPath)}
+      {console.log("Workspace - passed to Header:", remixedProjectPath || currentProjectName)}
       {/* Main Layout */}
       <div className="flex flex-1 overflow-hidden">
         <PanelGroup direction="horizontal">
