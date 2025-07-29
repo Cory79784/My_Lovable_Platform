@@ -1,0 +1,240 @@
+
+2025-07-29T09:48:38.703275
+================================ System Message ================================
+
+You will get information about a codebase that is currently on disk in the current folder.
+The user will ask you to write a script that runs the code in a specific way.
+You will answer with code blocks that include all the necessary terminal commands.
+Do not install globally. Do not use sudo.
+Do not explain the code, just give the commands.
+Do not use placeholders, use example values (like . for a folder argument) if necessary.
+
+
+================================ Human Message =================================
+
+
+        Make a unix script that
+        a) installs dependencies
+        b) runs all necessary parts of the codebase (in parallel if necessary)
+        
+Information about the codebase:
+
+```
+File: src/app.py
+1 from flask import Flask, jsonify, request
+2 from src.routes import todo_blueprint
+3 
+4 app = Flask(__name__)
+5 app.register_blueprint(todo_blueprint)
+6 
+7 if __name__ == '__main__':
+8     app.run(debug=True)
+
+File: src/models.py
+1 from dataclasses import dataclass
+2 
+3 @dataclass
+4 class Todo:
+5     id: int
+6     title: str
+7     completed: bool = False
+
+File: src/routes.py
+1 from flask import Blueprint, jsonify, request
+2 from src.database import add_todo, complete_todo, delete_todo, get_all_todos
+3 
+4 todo_blueprint = Blueprint('todo', __name__)
+5 
+6 @todo_blueprint.route('/todos', methods=['GET'])
+7 def get_todos():
+8     todos = get_all_todos()
+9     return jsonify([todo.__dict__ for todo in todos])
+10 
+11 @todo_blueprint.route('/todos', methods=['POST'])
+12 def create_todo():
+13     data = request.json
+14     new_todo = add_todo(data['title'])
+15     return jsonify(new_todo.__dict__), 201
+16 
+17 @todo_blueprint.route('/todos/<int:todo_id>', methods=['PUT'])
+18 def complete_todo_route(todo_id):
+19     updated_todo = complete_todo(todo_id)
+20     return jsonify(updated_todo.__dict__)
+21 
+22 @todo_blueprint.route('/todos/<int:todo_id>', methods=['DELETE'])
+23 def delete_todo_route(todo_id):
+24     delete_todo(todo_id)
+25     return '', 204
+
+File: src/database.py
+1 from src.models import Todo
+2 
+3 todos = []
+4 next_id = 1
+5 
+6 def add_todo(title):
+7     global next_id
+8     new_todo = Todo(id=next_id, title=title)
+9     todos.append(new_todo)
+10     next_id += 1
+11     return new_todo
+12 
+13 def complete_todo(todo_id):
+14     for todo in todos:
+15         if todo.id == todo_id:
+16             todo.completed = True
+17             return todo
+18     raise ValueError("Todo not found")
+19 
+20 def delete_todo(todo_id):
+21     global todos
+22     todos = [todo for todo in todos if todo.id != todo_id]
+23 
+24 def get_all_todos():
+25     return todos
+
+File: static/index.html
+1 <!DOCTYPE html>
+2 <html lang="en">
+3 <head>
+4     <meta charset="UTF-8">
+5     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+6     <link rel="stylesheet" href="styles.css">
+7     <title>Todo App</title>
+8 </head>
+9 <body>
+10     <div id="app">
+11         <h1>Todo List</h1>
+12         <input type="text" id="new-todo" placeholder="Add a new task">
+13         <button onclick="addTodo()">Add</button>
+14         <ul id="todo-list"></ul>
+15     </div>
+16     <script src="app.js"></script>
+17 </body>
+18 </html>
+
+File: static/styles.css
+1 body {
+2     font-family: Arial, sans-serif;
+3     background-color: #f4f4f9;
+4     color: #333;
+5     margin: 0;
+6     padding: 0;
+7     display: flex;
+8     justify-content: center;
+9     align-items: center;
+10     height: 100vh;
+11 }
+12 
+13 #app {
+14     background: white;
+15     padding: 20px;
+16     border-radius: 8px;
+17     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+18 }
+19 
+20 h1 {
+21     margin-bottom: 20px;
+22 }
+23 
+24 input[type="text"] {
+25     padding: 10px;
+26     width: 200px;
+27     margin-right: 10px;
+28 }
+29 
+30 button {
+31     padding: 10px;
+32 }
+33 
+34 ul {
+35     list-style-type: none;
+36     padding: 0;
+37 }
+38 
+39 li {
+40     padding: 10px;
+41     border-bottom: 1px solid #ddd;
+42     display: flex;
+43     justify-content: space-between;
+44     align-items: center;
+45 }
+46 
+47 li.completed {
+48     text-decoration: line-through;
+49     color: #888;
+50 }
+
+File: static/app.js
+1 document.addEventListener('DOMContentLoaded', () => {
+2     fetchTodos();
+3 });
+4 
+5 function fetchTodos() {
+6     fetch('/todos')
+7         .then(response => response.json())
+8         .then(todos => {
+9             const todoList = document.getElementById('todo-list');
+10             todoList.innerHTML = '';
+11             todos.forEach(todo => {
+12                 const li = document.createElement('li');
+13                 li.textContent = todo.title;
+14                 li.className = todo.completed ? 'completed' : '';
+15                 li.appendChild(createCompleteButton(todo.id));
+16                 li.appendChild(createDeleteButton(todo.id));
+17                 todoList.appendChild(li);
+18             });
+19         });
+20 }
+21 
+22 function createCompleteButton(todoId) {
+23     const button = document.createElement('button');
+24     button.textContent = 'Complete';
+25     button.onclick = () => {
+26         fetch(`/todos/${todoId}`, { method: 'PUT' })
+27             .then(() => fetchTodos());
+28     };
+29     return button;
+30 }
+31 
+32 function createDeleteButton(todoId) {
+33     const button = document.createElement('button');
+34     button.textContent = 'Delete';
+35     button.onclick = () => {
+36         fetch(`/todos/${todoId}`, { method: 'DELETE' })
+37             .then(() => fetchTodos());
+38     };
+39     return button;
+40 }
+41 
+42 function addTodo() {
+43     const input = document.getElementById('new-todo');
+44     const title = input.value.trim();
+45     if (title) {
+46         fetch('/todos', {
+47             method: 'POST',
+48             headers: { 'Content-Type': 'application/json' },
+49             body: JSON.stringify({ title })
+50         }).then(() => {
+51             input.value = '';
+52             fetchTodos();
+53         });
+54     }
+55 }
+
+File: requirements.txt
+1 Flask==2.0.1
+
+```
+
+================================== Ai Message ==================================
+
+```bash
+#!/bin/bash
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the Flask application
+python src/app.py
+```
