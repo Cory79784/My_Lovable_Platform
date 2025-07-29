@@ -1,0 +1,277 @@
+
+2025-07-29T10:00:21.756987
+================================ System Message ================================
+
+You will get information about a codebase that is currently on disk in the current folder.
+The user will ask you to write a script that runs the code in a specific way.
+You will answer with code blocks that include all the necessary terminal commands.
+Do not install globally. Do not use sudo.
+Do not explain the code, just give the commands.
+Do not use placeholders, use example values (like . for a folder argument) if necessary.
+
+
+================================ Human Message =================================
+
+
+        Make a unix script that
+        a) installs dependencies
+        b) runs all necessary parts of the codebase (in parallel if necessary)
+        
+Information about the codebase:
+
+```
+File: src/app.py
+1 from flask import Flask
+2 from src.routes import configure_routes
+3 from src.database import init_db
+4 
+5 app = Flask(__name__)
+6 
+7 # Initialize the database
+8 init_db(app)
+9 
+10 # Configure routes
+11 configure_routes(app)
+12 
+13 if __name__ == '__main__':
+14     app.run(debug=True)
+
+File: src/models.py
+1 from flask_sqlalchemy import SQLAlchemy
+2 from dataclasses import dataclass
+3 
+4 db = SQLAlchemy()
+5 
+6 @dataclass
+7 class Task(db.Model):
+8     id: int
+9     description: str
+10     completed: bool
+11 
+12     id = db.Column(db.Integer, primary_key=True)
+13     description = db.Column(db.String(200), nullable=False)
+14     completed = db.Column(db.Boolean, default=False)
+
+File: src/routes.py
+1 from flask import request, jsonify
+2 from src.models import db, Task
+3 
+4 def configure_routes(app):
+5     @app.route('/tasks', methods=['GET'])
+6     def get_tasks():
+7         tasks = Task.query.all()
+8         return jsonify(tasks)
+9 
+10     @app.route('/tasks', methods=['POST'])
+11     def add_task():
+12         data = request.get_json()
+13         new_task = Task(description=data['description'])
+14         db.session.add(new_task)
+15         db.session.commit()
+16         return jsonify(new_task), 201
+17 
+18     @app.route('/tasks/<int:task_id>', methods=['PUT'])
+19     def complete_task(task_id):
+20         task = Task.query.get(task_id)
+21         if task is None:
+22             return jsonify({'error': 'Task not found'}), 404
+23         task.completed = True
+24         db.session.commit()
+25         return jsonify(task)
+26 
+27     @app.route('/tasks/<int:task_id>', methods=['DELETE'])
+28     def delete_task(task_id):
+29         task = Task.query.get(task_id)
+30         if task is None:
+31             return jsonify({'error': 'Task not found'}), 404
+32         db.session.delete(task)
+33         db.session.commit()
+34         return jsonify({'message': 'Task deleted'})
+
+File: src/database.py
+1 from flask_sqlalchemy import SQLAlchemy
+2 from src.models import db
+3 
+4 def init_db(app):
+5     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///tasks.db'
+6     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+7     db.init_app(app)
+8     with app.app_context():
+9         db.create_all()
+
+File: templates/index.html
+1 <!DOCTYPE html>
+2 <html lang="en">
+3 <head>
+4     <meta charset="UTF-8">
+5     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+6     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+7     <title>Todo App</title>
+8 </head>
+9 <body>
+10     <div class="container">
+11         <h1>Todo List</h1>
+12         <div id="task-form">
+13             <input type="text" id="task-input" placeholder="Add a new task">
+14             <button onclick="addTask()">Add</button>
+15         </div>
+16         <ul id="task-list"></ul>
+17     </div>
+18     <script src="{{ url_for('static', filename='app.js') }}"></script>
+19 </body>
+20 </html>
+
+File: static/styles.css
+1 body {
+2     font-family: Arial, sans-serif;
+3     background-color: #f4f4f9;
+4     margin: 0;
+5     padding: 0;
+6 }
+7 
+8 .container {
+9     max-width: 600px;
+10     margin: 50px auto;
+11     padding: 20px;
+12     background-color: #fff;
+13     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+14 }
+15 
+16 h1 {
+17     text-align: center;
+18     color: #333;
+19 }
+20 
+21 #task-form {
+22     display: flex;
+23     justify-content: space-between;
+24     margin-bottom: 20px;
+25 }
+26 
+27 #task-input {
+28     flex: 1;
+29     padding: 10px;
+30     font-size: 16px;
+31 }
+32 
+33 button {
+34     padding: 10px 20px;
+35     background-color: #007bff;
+36     color: #fff;
+37     border: none;
+38     cursor: pointer;
+39 }
+40 
+41 button:hover {
+42     background-color: #0056b3;
+43 }
+44 
+45 ul {
+46     list-style-type: none;
+47     padding: 0;
+48 }
+49 
+50 li {
+51     padding: 10px;
+52     border-bottom: 1px solid #ddd;
+53     display: flex;
+54     justify-content: space-between;
+55 }
+56 
+57 li.completed {
+58     text-decoration: line-through;
+59     color: #888;
+60 }
+61 
+62 li button {
+63     background-color: #dc3545;
+64 }
+65 
+66 li button:hover {
+67     background-color: #c82333;
+68 }
+
+File: static/app.js
+1 document.addEventListener('DOMContentLoaded', loadTasks);
+2 
+3 function loadTasks() {
+4     fetch('/tasks')
+5         .then(response => response.json())
+6         .then(tasks => {
+7             const taskList = document.getElementById('task-list');
+8             taskList.innerHTML = '';
+9             tasks.forEach(task => {
+10                 const li = document.createElement('li');
+11                 li.textContent = task.description;
+12                 if (task.completed) {
+13                     li.classList.add('completed');
+14                 }
+15                 const completeButton = document.createElement('button');
+16                 completeButton.textContent = 'Complete';
+17                 completeButton.onclick = () => completeTask(task.id);
+18                 const deleteButton = document.createElement('button');
+19                 deleteButton.textContent = 'Delete';
+20                 deleteButton.onclick = () => deleteTask(task.id);
+21                 li.appendChild(completeButton);
+22                 li.appendChild(deleteButton);
+23                 taskList.appendChild(li);
+24             });
+25         });
+26 }
+27 
+28 function addTask() {
+29     const taskInput = document.getElementById('task-input');
+30     const description = taskInput.value.trim();
+31     if (description) {
+32         fetch('/tasks', {
+33             method: 'POST',
+34             headers: {
+35                 'Content-Type': 'application/json'
+36             },
+37             body: JSON.stringify({ description })
+38         })
+39         .then(response => response.json())
+40         .then(task => {
+41             taskInput.value = '';
+42             loadTasks();
+43         });
+44     }
+45 }
+46 
+47 function completeTask(taskId) {
+48     fetch(`/tasks/${taskId}`, {
+49         method: 'PUT'
+50     })
+51     .then(response => response.json())
+52     .then(() => {
+53         loadTasks();
+54     });
+55 }
+56 
+57 function deleteTask(taskId) {
+58     fetch(`/tasks/${taskId}`, {
+59         method: 'DELETE'
+60     })
+61     .then(response => response.json())
+62     .then(() => {
+63         loadTasks();
+64     });
+65 }
+
+File: requirements.txt
+1 Flask==2.0.1
+2 Flask-SQLAlchemy==2.5.1
+
+```
+
+================================== Ai Message ==================================
+
+```bash
+#!/bin/bash
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Run the application
+python src/app.py
+```

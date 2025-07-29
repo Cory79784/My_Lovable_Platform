@@ -4,6 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { 
   Plus, 
   MessageSquare, 
@@ -12,7 +18,9 @@ import {
   Edit3, 
   Search,
   FolderOpen,
-  Code
+  Code,
+  MoreHorizontal,
+  Settings
 } from 'lucide-react';
 
 interface ChatSummary {
@@ -247,28 +255,39 @@ export const WorkspaceManager: React.FC<WorkspaceManagerProps> = ({
                     )}
                   </div>
                   <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        startEditing(chat);
-                      }}
-                      className="h-6 w-6 p-0"
-                    >
-                      <Edit3 className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteChat(chat.chat_id);
-                      }}
-                      className="h-6 w-6 p-0 text-destructive hover:text-destructive"
-                    >
-                      <Trash2 className="h-3 w-3" />
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={(e) => e.stopPropagation()}
+                          className="h-6 w-6 p-0"
+                        >
+                          <MoreHorizontal className="h-3 w-3" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            startEditing(chat);
+                          }}
+                        >
+                          <Edit3 className="h-3 w-3 mr-2" />
+                          Rename
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            deleteChat(chat.chat_id);
+                          }}
+                          className="text-destructive focus:text-destructive"
+                        >
+                          <Trash2 className="h-3 w-3 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               </CardHeader>

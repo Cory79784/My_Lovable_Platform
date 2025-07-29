@@ -5,7 +5,13 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Dialog as ConfirmDialog } from "@/components/ui/dialog";
-import { ArrowRight, Sparkles, Search, ExternalLink, Copy, Loader2, FolderOpen, Download } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { ArrowRight, Sparkles, Search, ExternalLink, Copy, Loader2, FolderOpen, Download, MoreHorizontal, Edit3, Trash2 } from "lucide-react";
 
 const Landing = () => {
   const [prompt, setPrompt] = useState("");
@@ -351,15 +357,40 @@ const Landing = () => {
                         <h3 className="font-medium">{project.title || "Untitled"}</h3>
                         <p className="text-sm text-muted-foreground">ID: {project.chat_id}</p>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="opacity-60 hover:opacity-100 transition-opacity z-10"
-                        onClick={e => { e.stopPropagation(); setDeleteTarget(project); }}
-                        title="Delete"
-                      >
-                        <span className="text-lg">🗑️</span>
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // TODO: 实现重命名功能
+                              console.log('Rename project:', project.chat_id);
+                            }}
+                          >
+                            <Edit3 className="h-4 w-4 mr-2" />
+                            Rename
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setDeleteTarget(project);
+                            }}
+                            className="text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 </CardContent>

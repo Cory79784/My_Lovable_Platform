@@ -1,0 +1,288 @@
+
+2025-07-29T09:48:10.431454
+================================ System Message ================================
+
+You will get information about a codebase that is currently on disk in the current folder.
+The user will ask you to write a script that runs the code in a specific way.
+You will answer with code blocks that include all the necessary terminal commands.
+Do not install globally. Do not use sudo.
+Do not explain the code, just give the commands.
+Do not use placeholders, use example values (like . for a folder argument) if necessary.
+
+
+================================ Human Message =================================
+
+
+        Make a unix script that
+        a) installs dependencies
+        b) runs all necessary parts of the codebase (in parallel if necessary)
+        
+Information about the codebase:
+
+```
+File: src/app.py
+1 from flask import Flask
+2 from src.routes import configure_routes
+3 
+4 app = Flask(__name__)
+5 
+6 # Configure routes
+7 configure_routes(app)
+8 
+9 if __name__ == '__main__':
+10     app.run(debug=True)
+
+File: src/models.py
+1 from dataclasses import dataclass
+2 from sqlalchemy import Column, Integer, String, Boolean
+3 from sqlalchemy.ext.declarative import declarative_base
+4 
+5 Base = declarative_base()
+6 
+7 @dataclass
+8 class Todo(Base):
+9     __tablename__ = 'todos'
+10 
+11     id: int
+12     title: str
+13     completed: bool
+14 
+15     id = Column(Integer, primary_key=True)
+16     title = Column(String, nullable=False)
+17     completed = Column(Boolean, default=False)
+
+File: src/database.py
+1 from sqlalchemy import create_engine
+2 from sqlalchemy.orm import sessionmaker
+3 from src.models import Base
+4 
+5 DATABASE_URL = "sqlite:///todos.db"
+6 
+7 engine = create_engine(DATABASE_URL)
+8 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+9 
+10 def init_db():
+11     Base.metadata.create_all(bind=engine)
+
+File: src/routes.py
+1 from flask import request, jsonify
+2 from src.database import SessionLocal
+3 from src.models import Todo
+4 
+5 def configure_routes(app):
+6     @app.route('/todos', methods=['GET'])
+7     def get_todos():
+8         session = SessionLocal()
+9         todos = session.query(Todo).all()
+10         session.close()
+11         return jsonify([todo.__dict__ for todo in todos])
+12 
+13     @app.route('/todos', methods=['POST'])
+14     def add_todo():
+15         session = SessionLocal()
+16         data = request.json
+17         new_todo = Todo(
+18             title=data['title'],
+19             completed=False
+20         )
+21         session.add(new_todo)
+22         session.commit()
+23         session.close()
+24         return jsonify(new_todo.__dict__), 201
+25 
+26     @app.route('/todos/<int:todo_id>', methods=['PUT'])
+27     def complete_todo(todo_id):
+28         session = SessionLocal()
+29         todo = session.query(Todo).filter(Todo.id == todo_id).first()
+30         if todo:
+31             todo.completed = True
+32             session.commit()
+33             session.close()
+34             return jsonify(todo.__dict__)
+35         session.close()
+36         return jsonify({'error': 'Todo not found'}), 404
+37 
+38     @app.route('/todos/<int:todo_id>', methods=['DELETE'])
+39     def delete_todo(todo_id):
+40         session = SessionLocal()
+41         todo = session.query(Todo).filter(Todo.id == todo_id).first()
+42         if todo:
+43             session.delete(todo)
+44             session.commit()
+45             session.close()
+46             return jsonify({'message': 'Todo deleted'})
+47         session.close()
+48         return jsonify({'error': 'Todo not found'}), 404
+
+File: src/templates/index.html
+1 <!DOCTYPE html>
+2 <html lang="en">
+3 <head>
+4     <meta charset="UTF-8">
+5     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+6     <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+7     <title>Todo App</title>
+8 </head>
+9 <body>
+10     <div id="app">
+11         <h1>Todo List</h1>
+12         <input type="text" id="new-todo" placeholder="Add a new task">
+13         <button onclick="addTodo()">Add</button>
+14         <ul id="todo-list"></ul>
+15     </div>
+16     <script src="{{ url_for('static', filename='app.js') }}"></script>
+17 </body>
+18 </html>
+
+File: src/static/styles.css
+1 body {
+2     font-family: Arial, sans-serif;
+3     background-color: #f4f4f9;
+4     color: #333;
+5     margin: 0;
+6     padding: 0;
+7     display: flex;
+8     justify-content: center;
+9     align-items: center;
+10     height: 100vh;
+11 }
+12 
+13 #app {
+14     background: white;
+15     padding: 20px;
+16     border-radius: 8px;
+17     box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+18 }
+19 
+20 h1 {
+21     margin-bottom: 20px;
+22 }
+23 
+24 input[type="text"] {
+25     padding: 10px;
+26     width: 200px;
+27     margin-right: 10px;
+28 }
+29 
+30 button {
+31     padding: 10px 15px;
+32     background-color: #007bff;
+33     color: white;
+34     border: none;
+35     border-radius: 5px;
+36     cursor: pointer;
+37 }
+38 
+39 button:hover {
+40     background-color: #0056b3;
+41 }
+42 
+43 ul {
+44     list-style-type: none;
+45     padding: 0;
+46 }
+47 
+48 li {
+49     padding: 10px;
+50     background: #f9f9f9;
+51     margin-bottom: 5px;
+52     border-radius: 5px;
+53     display: flex;
+54     justify-content: space-between;
+55     align-items: center;
+56 }
+57 
+58 li.completed {
+59     text-decoration: line-through;
+60     color: #999;
+61 }
+
+File: src/static/app.js
+1 document.addEventListener('DOMContentLoaded', function() {
+2     fetchTodos();
+3 });
+4 
+5 function fetchTodos() {
+6     fetch('/todos')
+7         .then(response => response.json())
+8         .then(todos => {
+9             const todoList = document.getElementById('todo-list');
+10             todoList.innerHTML = '';
+11             todos.forEach(todo => {
+12                 const li = document.createElement('li');
+13                 li.textContent = todo.title;
+14                 if (todo.completed) {
+15                     li.classList.add('completed');
+16                 }
+17                 const completeButton = document.createElement('button');
+18                 completeButton.textContent = 'Complete';
+19                 completeButton.onclick = () => completeTodo(todo.id);
+20                 const deleteButton = document.createElement('button');
+21                 deleteButton.textContent = 'Delete';
+22                 deleteButton.onclick = () => deleteTodo(todo.id);
+23                 li.appendChild(completeButton);
+24                 li.appendChild(deleteButton);
+25                 todoList.appendChild(li);
+26             });
+27         });
+28 }
+29 
+30 function addTodo() {
+31     const newTodoInput = document.getElementById('new-todo');
+32     const title = newTodoInput.value.trim();
+33     if (title) {
+34         fetch('/todos', {
+35             method: 'POST',
+36             headers: {
+37                 'Content-Type': 'application/json'
+38             },
+39             body: JSON.stringify({ title })
+40         })
+41         .then(response => response.json())
+42         .then(() => {
+43             newTodoInput.value = '';
+44             fetchTodos();
+45         });
+46     }
+47 }
+48 
+49 function completeTodo(todoId) {
+50     fetch(`/todos/${todoId}`, {
+51         method: 'PUT'
+52     })
+53     .then(response => response.json())
+54     .then(() => {
+55         fetchTodos();
+56     });
+57 }
+58 
+59 function deleteTodo(todoId) {
+60     fetch(`/todos/${todoId}`, {
+61         method: 'DELETE'
+62     })
+63     .then(response => response.json())
+64     .then(() => {
+65         fetchTodos();
+66     });
+67 }
+
+File: requirements.txt
+1 Flask==2.0.1
+2 SQLAlchemy==1.4.22
+
+```
+
+================================== Ai Message ==================================
+
+```bash
+#!/bin/bash
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Initialize the database
+python -c "from src.database import init_db; init_db()"
+
+# Run the Flask application
+python src/app.py
+```
