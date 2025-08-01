@@ -455,9 +455,38 @@ python run.py --log-level DEBUG --task "your task"
 Compared to the MCP solution:
 
 - **Improved Stability**: No external server, eliminating connection failures
+
 - **Faster Response**: Direct Python function calls for quicker responses
+
 - **Simplified Architecture**: Fewer external dependencies, easier maintenance
+
 - **Enhanced Features**: Added grep search and bash command execution
+
+  
+
+## Comparision of different agent paradigm
+
+Compared to the MCP solution:
+
+```
++---------------------+----------------------------+--------------------+
+| Method             | Features                   | Integration Effort |
++---------------------+----------------------------+--------------------+
+| CoT (Chain of      | Generates reasoning chain, | Medium-High        |
+| Thought)           | no direct actions          |                    |
++---------------------+----------------------------+--------------------+
+| Single-Step Action | Calls one fixed tool,      | Low (but limited   |
+| Agent              | no multi-tool logic        | capability)        |
++---------------------+----------------------------+--------------------+
+| Planner-Executor   | Plans first, executes      | Medium-High        |
+|                    | step-by-step actions       | (complex design)   |
++---------------------+----------------------------+--------------------+
+| ReAct              | Action → Observation →     | Low (natural fit)  |
+|                    | dynamic decision-making    |                    |
++---------------------+----------------------------+--------------------+
+```
+
+
 
 ------
 
