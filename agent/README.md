@@ -299,7 +299,41 @@ Supports restoring previous sessions by name or ID, ensuring conversation contin
 
 
 
+------
 
+## **Prompt & Context Principles**
+
+- **Clear Prompt Layers**
+  - System prompt defines agent behavior and tool usage.
+  - Domain-specific hints optimize frontend development tasks.
+- **Context Persistence**
+  - Store conversation, tool calls, and session state in SQLite.
+  - Support session resume and state snapshots.
+- **Token Efficiency**
+  - Keep system prompt fixed and append only recent steps.
+  - Use truncation for long histories to prevent token overflow.
+- **Extensible by Design**
+  - Modular prompt text and event callbacks enable future customization.
+
+```
+User Input ─┐
+            ▼
+        [ Prompt ]
+            │
+            ▼
+        [ Agent ]
+            │
+            ▼
+   ┌────────────────┐
+   │   Context DB   │
+   │ (sessions, log │
+   │  & snapshots)  │
+   └────────────────┘
+```
+
+------
+
+ 
 
 ## Future deployment and scale suggestion（AWS example）
 
@@ -466,25 +500,12 @@ Compared to the MCP solution:
 
 ## Comparision of different agent paradigm
 
-Compared to the MCP solution:
-
-```
-+---------------------+----------------------------+--------------------+
-| Method             | Features                   | Integration Effort |
-+---------------------+----------------------------+--------------------+
-| CoT (Chain of      | Generates reasoning chain, | Medium-High        |
-| Thought)           | no direct actions          |                    |
-+---------------------+----------------------------+--------------------+
-| Single-Step Action | Calls one fixed tool,      | Low (but limited   |
-| Agent              | no multi-tool logic        | capability)        |
-+---------------------+----------------------------+--------------------+
-| Planner-Executor   | Plans first, executes      | Medium-High        |
-|                    | step-by-step actions       | (complex design)   |
-+---------------------+----------------------------+--------------------+
-| ReAct              | Action → Observation →     | Low (natural fit)  |
-|                    | dynamic decision-making    |                    |
-+---------------------+----------------------------+--------------------+
-```
+| Method                   | Features                                       | Integration Effort           |
+| ------------------------ | ---------------------------------------------- | ---------------------------- |
+| CoT (Chain of Thought)   | Generates reasoning chain, no direct actions   | Medium‑High                  |
+| Single‑Step Action Agent | Calls one fixed tool, no multi‑tool logic      | Low (but limited capability) |
+| Planner‑Executor         | Plans first, executes step‑by‑step actions     | Medium‑High (complex design) |
+| ReAct                    | Action → Observation → dynamic decision‑making | Low (natural fit)            |
 
 
 
