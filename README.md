@@ -7,10 +7,10 @@ This project is my own way to reproduce the core workflow of [lovable.dev](https
 ### Core Functionality
 - **Multi-dialogue Chat System** - Support for multiple concurrent chat sessions
 - **gpt-engineer Integration** - Automated project generation using Python subprocess (https://github.com/AntonOsika/gpt-engineer)
-- **Streaming Logs** - Real-time output streaming from gpt-engineer to frontend
+- **Streaming Logs** - Real-time output streaming from my own agent to frontend
 - **Iframe Project Preview** - Automatic display and refresh of generated projects
 - **File Upload & Processing** - Support for PDF, DOCX, Excel, and CSV files
-- **Vector Database Integration** - RAG (Retrieval-Augmented Generation) capabilities
+- **Vector Database Integration** - RAG (Retrieval-Augmented Generation) capabilities (waiting for integrated).
 - **Semantic shadcn/ui wrapper**: Aim to ensure a consistent look and feel, improving visual quality  
 
 ### Project Preview Features
@@ -31,13 +31,13 @@ This project is my own way to reproduce the core workflow of [lovable.dev](https
 ├─────────────────────────────────────────────────────────────┤
 │                    Backend (FastAPI)                       │
 │  - Chat routes with streaming                             │
-│  - gpt-engineer subprocess management                     │
 │  - Project file serving and preview                       │
 ├─────────────────────────────────────────────────────────────┤
-│                    gpt-engineer                            │
+│                    Agent                                  │
 │  - Project generation from prompts                        │
 │  - File system output                                     │
 └─────────────────────────────────────────────────────────────┘
+backend and agent waiting for integration in unified fastAPI
 ```
 
 ## 📦 Installation

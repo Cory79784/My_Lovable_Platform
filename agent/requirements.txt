@@ -1,0 +1,37 @@
+# Frontend Development Agent Dependencies
+
+# Core dependencies
+dataclasses-json>=0.5.7
+
+# Database and data handling
+# sqlite3 is built-in with Python, no need to install
+aiosqlite>=0.17.0
+
+# HTTP and networking (for MCP communication)
+aiohttp>=3.8.0
+websockets>=10.4
+
+# Logging and debugging
+colorlog>=6.7.0
+
+# File system operations
+pathspec>=0.10.0
+
+# AI model integrations
+openai>=1.0.0              # For OpenAI GPT models
+
+# Configuration management
+python-dotenv>=0.19.0
+
+# Development dependencies (optional)
+pytest>=7.1.0
+pytest-asyncio>=0.21.0
+black>=22.0.0
+
+# Optional AI model integrations (uncomment if needed)
+# anthropic>=0.3.0           # For Anthropic Claude models
+# together>=0.2.0            # For Together AI models
+
+# Optional utilities (uncomment if needed)
+# rich>=12.0.0               # Rich text formatting
+# click>=8.1.0               # CLI utilities

@@ -472,7 +472,7 @@ async def rename_chat(chat_id: str, request: RenameChatRequest):
         raise HTTPException(status_code=500, detail=f"Failed to rename chat: {str(e)}")
 
 class GenerateProjectRequest(BaseModel):
-    project_name: str
+    # project_name: str  # Not needed for agent calls
     prompt: str
 
 class GenerateProjectResponse(BaseModel):
@@ -482,20 +482,19 @@ class GenerateProjectResponse(BaseModel):
 
 @router.post("/generate-project", response_model=GenerateProjectResponse)
 async def generate_project(data: GenerateProjectRequest = Body(...)):
-    project_name = data.project_name
+    # project_name = data.project_name  # Not needed
     prompt = data.prompt
-    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../gpt_projects"))
-    os.makedirs(BASE_DIR, exist_ok=True)
-    project_path = os.path.join(BASE_DIR, project_name)
-    os.makedirs(project_path, exist_ok=True)
-    with open(os.path.join(project_path, "main_prompt"), "w", encoding="utf-8") as f:
-        f.write(prompt)
+    
+    # Get the agent directory path
+    agent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../agent"))
+    
     import subprocess
     result = subprocess.run(
-        ["gpt-engineer", project_path],
+        ["python", "run.py"],
+        input=f"task \"{prompt}\"",
         capture_output=True,
         text=True,
-        cwd=BASE_DIR,
+        cwd=agent_dir,
         env=os.environ.copy()
     )
     return GenerateProjectResponse(
@@ -508,19 +507,21 @@ async def generate_project(data: GenerateProjectRequest = Body(...)):
 async def generate_project_stream(data: GenerateProjectRequest = Body(...)):
     import subprocess
     import time
-    project_name = data.project_name
+    import os
+    # project_name = data.project_name  # Not needed
     prompt = data.prompt
-    BASE_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../gpt_projects"))
-    os.makedirs(BASE_DIR, exist_ok=True)
-    project_path = os.path.join(BASE_DIR, project_name)
-    os.makedirs(project_path, exist_ok=True)
-    with open(os.path.join(project_path, "main_prompt"), "w", encoding="utf-8") as f:
-        f.write(prompt)
+    
+    # Get the agent directory path
+    agent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../../../agent"))
+    
     def stream_logs():
-        yield f"Starting gpt-engineer for project: {project_name}\n"
+        yield f"Starting agent for task\n"
+        yield f"Task: {prompt}\n"
+        
+        # Change to agent directory and run the agent
         process = subprocess.Popen(
-            ["gpt-engineer", project_path],
-            cwd=BASE_DIR,
+            ["python", "run.py"],
+            cwd=agent_dir,
             env=os.environ.copy(),
             stdin=subprocess.PIPE,
             stdout=subprocess.PIPE,
@@ -528,9 +529,10 @@ async def generate_project_stream(data: GenerateProjectRequest = Body(...)):
             text=True,
             bufsize=1
         )
-        # Automatically input prompt again to simulate manual input
-        process.stdin.write(prompt + "\n")
+        # Send the task command to stdin
+        process.stdin.write(f"task \"{prompt}\"\n")
         process.stdin.flush()
+        
         for line in iter(process.stdout.readline, ""):
             yield line
         process.stdout.close()
