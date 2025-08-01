@@ -6,7 +6,7 @@ This project is my own way to reproduce the core workflow of [lovable.dev](https
 
 ### Core Functionality
 - **Multi-dialogue Chat System** - Support for multiple concurrent chat sessions
-- **gpt-engineer Integration** - Automated project generation using Python subprocess (https://github.com/AntonOsika/gpt-engineer)
+- **agent Integration** - Using self defined agent in reAct paradigm 
 - **Streaming Logs** - Real-time output streaming from my own agent to frontend
 - **Iframe Project Preview** - Automatic display and refresh of generated projects
 - **File Upload & Processing** - Support for PDF, DOCX, Excel, and CSV files
