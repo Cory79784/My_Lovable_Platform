@@ -459,6 +459,25 @@ Compared to the MCP solution:
 - **Simplified Architecture**: Fewer external dependencies, easier maintenance
 - **Enhanced Features**: Added grep search and bash command execution
 
+
+## Comparison of diffenent agent paradigm
+
++---------------------+----------------------------+--------------------+
+| Method             | Features                   | Integration Effort |
++---------------------+----------------------------+--------------------+
+| CoT (Chain of      | Generates reasoning chain, | Medium-High        |
+| Thought)           | no direct actions          |                    |
++---------------------+----------------------------+--------------------+
+| Single-Step Action | Calls one fixed tool,      | Low (but limited   |
+| Agent              | no multi-tool logic        | capability)        |
++---------------------+----------------------------+--------------------+
+| Planner-Executor   | Plans first, executes      | Medium-High        |
+|                    | step-by-step actions       | (complex design)   |
++---------------------+----------------------------+--------------------+
+| ReAct              | Action → Observation →     | Low (natural fit)  |
+|                    | dynamic decision-making    |                    |
++---------------------+----------------------------+--------------------+
+
 ------
 
 ## 🤝 Contributing
