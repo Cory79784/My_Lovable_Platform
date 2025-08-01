@@ -1,6 +1,4 @@
-Here’s the English version of your document with the same structure and formatting:
 
-------
 
 # Frontend Development Agent
 
