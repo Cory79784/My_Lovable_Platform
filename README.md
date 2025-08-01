@@ -45,7 +45,6 @@ backend and agent waiting for integration in unified fastAPI
 ### Prerequisites
 - Python 3.8+
 - Node.js 16+
-- gpt-engineer installed globally
 
 ### Backend Setup
 ```bash
@@ -284,23 +283,18 @@ const prompt = "Create a REST API documentation page with examples and interacti
 
 ### Common Issues
 
-1. **gpt-engineer not found**
-   ```bash
-   pip install gpt-engineer
-   ```
-
-2. **Iframe not loading**
+1. **Iframe not loading**
    - Check CORS settings
    - Verify project files exist
    - Check browser console for errors
 
-3. **Streaming not working**
+2. **Streaming not working**
    
    - Ensure backend is running on correct port
    - Check network connectivity
    - Verify streaming response headers
    
-4. **Project preview not updating**
+33. **Project preview not updating**
    - Check iframe refresh interval
    - Verify project generation completed
    - Check file permissions
@@ -355,10 +349,9 @@ curl -v "http://localhost:8000/api/projects"
 
 ## Current Issues / Blockers
 
-1. Subprocess Integration with GPT Engineer
+1. Integration with Agent
    - Current implementation relies on CLI calls via `subprocess`, which is fragile and error-prone.  
-   - Issues include alias mismatch, unnecessary stdin handling, working directory problems, and environment variable setup.  
-   - Better Approach: Extract a dedicated Python function or use an official library (no stable ones found yet).
+
 
 2. Iframe Rendering for Complex Builds  
    - Simple static builds render correctly, but framework-based builds fail.  
